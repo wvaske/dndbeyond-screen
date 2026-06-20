@@ -7,8 +7,14 @@
 {% macro shouldIncludeFeature(feature) %}
   {% set feature_name = feature.definition.name ?? feature.name ?? '' %}
   {% set description = (feature.definition.description ?? feature.snippet ?? feature.description ?? '')|lower %}
-  {# Only include if it has a name and matches our criteria #}
-  {% if feature_name is not empty and (
+
+  {# Exclude purely informational/GM discretionary features #}
+  {% set is_informational =
+     ('at your gm' in description and 'discretion' in description) or
+     (description|length < 100 and 'gm' in description) %}
+
+  {# Only include if it has a name, matches our criteria, and isn't purely informational #}
+  {% if feature_name is not empty and not is_informational and (
      (feature.limitedUse is defined and feature.limitedUse)
      or ('per turn' in description)
      or ('on your turn' in description)
