@@ -1,0 +1,33 @@
+{% set feature_name = feature.definition.name ?? feature.name ?? '' %}
+{% set feature_description = feature.definition.description ?? feature.snippet ?? feature.description ?? '' %}
+{% set limited_use = feature.limitedUse is defined ? feature.limitedUse : null %}
+
+{# Skip features without a valid name as a final safety check #}
+{% if feature_name is not empty and feature_name|trim != '' %}
+<div class="col-12">
+  {# Display usage information #}
+  {% if limited_use %}
+    {% set max_uses = limited_use.maxUses ?? limited_use.numberUsed ?? 0 %}
+    {% set used = limited_use.numberUsed ?? 0 %}
+    {% set available = max_uses - used %}
+
+    <span class="badge badge-success">
+      {{ available }}/{{ max_uses }}
+    </span>
+  {% endif %}
+
+  <a
+    href="javascript:void(0)"
+    data-toggle="popover"
+    data-trigger="focus"
+    data-html="true"
+    title="{{ feature_name|e }}"
+    data-content="{{ feature_description|e('html_attr') }}"
+  >{{ feature_name }}</a>
+
+  {# Show reset type if available #}
+  {% if limited_use.resetType is defined %}
+    <small class="text-muted">({{ limited_use.resetType }})</small>
+  {% endif %}
+</div>
+{% endif %}

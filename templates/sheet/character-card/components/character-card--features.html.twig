@@ -99,10 +99,41 @@
   {% endfor %}
 {% endif %}
 
-{# Sort features alphabetically by name #}
-{% set sorted_features = all_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
+{# Group features by activation type #}
+{% set action_features = [] %}
+{% set bonus_action_features = [] %}
+{% set reaction_features = [] %}
+{% set attack_features = [] %}
+{% set special_features = [] %}
 
-{% if sorted_features is not empty %}
+{% for feature in all_features %}
+  {% set activation_type = (feature.definition.activation.activationType ?? feature.activation.activationType ?? '')|lower %}
+  {% set description = (feature.definition.description ?? feature.snippet ?? feature.description ?? '')|lower %}
+
+  {# Categorize based on activation type or description keywords #}
+  {% if 'reaction' in activation_type or 'reaction' in description %}
+    {% set reaction_features = reaction_features|merge([feature]) %}
+  {% elseif 'bonus' in activation_type or 'bonus action' in description %}
+    {% set bonus_action_features = bonus_action_features|merge([feature]) %}
+  {% elseif 'action' in activation_type and 'bonus' not in activation_type %}
+    {% set action_features = action_features|merge([feature]) %}
+  {% elseif 'attack' in description or 'when you hit' in description or 'per attack' in description %}
+    {% set attack_features = attack_features|merge([feature]) %}
+  {% else %}
+    {% set special_features = special_features|merge([feature]) %}
+  {% endif %}
+{% endfor %}
+
+{# Sort each group alphabetically #}
+{% set action_features = action_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
+{% set bonus_action_features = bonus_action_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
+{% set reaction_features = reaction_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
+{% set attack_features = attack_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
+{% set special_features = special_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
+
+{% set has_any_features = action_features is not empty or bonus_action_features is not empty or reaction_features is not empty or attack_features is not empty or special_features is not empty %}
+
+{% if has_any_features %}
   <div class="row">
     <div class="col mb-1">
       <button
@@ -115,42 +146,57 @@
     <div class="w-100"></div>
     <div class="col">
       <div class="features row collapse" id="features-{{ character.id }}">
-        {# Display features with limited uses or per-turn/per-attack abilities #}
-        {% for feature in sorted_features %}
-          {% set feature_name = feature.definition.name ?? feature.name ?? '' %}
-          {% set feature_description = feature.definition.description ?? feature.snippet ?? feature.description ?? '' %}
-          {% set limited_use = feature.limitedUse is defined ? feature.limitedUse : null %}
+        {# Display features grouped by activation type #}
 
-          {# Skip features without a valid name as a final safety check #}
-          {% if feature_name is not empty and feature_name|trim != '' %}
-          <div class="col-12">
-            {# Display usage information #}
-            {% if limited_use %}
-              {% set max_uses = limited_use.maxUses ?? limited_use.numberUsed ?? 0 %}
-              {% set used = limited_use.numberUsed ?? 0 %}
-              {% set available = max_uses - used %}
-
-              <span class="badge badge-success">
-                {{ available }}/{{ max_uses }}
-              </span>
-            {% endif %}
-
-            <a
-              href="javascript:void(0)"
-              data-toggle="popover"
-              data-trigger="focus"
-              data-html="true"
-              title="{{ feature_name|e }}"
-              data-content="{{ feature_description|e('html_attr') }}"
-            >{{ feature_name }}</a>
-
-            {# Show reset type if available #}
-            {% if limited_use.resetType is defined %}
-              <small class="text-muted">({{ limited_use.resetType }})</small>
-            {% endif %}
+        {# Reactions #}
+        {% if reaction_features is not empty %}
+          <div class="col-12 mt-2">
+            <h6 class="text-muted">Reactions</h6>
           </div>
-          {% endif %}
-        {% endfor %}
+          {% for feature in reaction_features %}
+            {% include 'sheet/character-card/components/character-card--feature-item.html.twig' with {'feature': feature} only %}
+          {% endfor %}
+        {% endif %}
+
+        {# Bonus Actions #}
+        {% if bonus_action_features is not empty %}
+          <div class="col-12 mt-2">
+            <h6 class="text-muted">Bonus Actions</h6>
+          </div>
+          {% for feature in bonus_action_features %}
+            {% include 'sheet/character-card/components/character-card--feature-item.html.twig' with {'feature': feature} only %}
+          {% endfor %}
+        {% endif %}
+
+        {# Actions #}
+        {% if action_features is not empty %}
+          <div class="col-12 mt-2">
+            <h6 class="text-muted">Actions</h6>
+          </div>
+          {% for feature in action_features %}
+            {% include 'sheet/character-card/components/character-card--feature-item.html.twig' with {'feature': feature} only %}
+          {% endfor %}
+        {% endif %}
+
+        {# On Attack #}
+        {% if attack_features is not empty %}
+          <div class="col-12 mt-2">
+            <h6 class="text-muted">On Attack</h6>
+          </div>
+          {% for feature in attack_features %}
+            {% include 'sheet/character-card/components/character-card--feature-item.html.twig' with {'feature': feature} only %}
+          {% endfor %}
+        {% endif %}
+
+        {# Special/Other #}
+        {% if special_features is not empty %}
+          <div class="col-12 mt-2">
+            <h6 class="text-muted">Other</h6>
+          </div>
+          {% for feature in special_features %}
+            {% include 'sheet/character-card/components/character-card--feature-item.html.twig' with {'feature': feature} only %}
+          {% endfor %}
+        {% endif %}
       </div>
     </div>
   </div>
