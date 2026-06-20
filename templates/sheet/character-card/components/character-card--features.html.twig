@@ -109,7 +109,7 @@
         {% for feature in sorted_features %}
           {% set feature_name = feature.definition.name ?? feature.name ?? 'Unknown Feature' %}
           {% set feature_description = feature.definition.description ?? feature.snippet ?? feature.description ?? '' %}
-          {% set limited_use = feature.limitedUse %}
+          {% set limited_use = feature.limitedUse is defined ? feature.limitedUse : null %}
 
           <div class="col-12">
             {# Display usage information #}
