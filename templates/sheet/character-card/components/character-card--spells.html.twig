@@ -1,24 +1,36 @@
 {# Show all spells for DM screen - this is a DM tool so show everything #}
-{# Check for both legacy (classSpells) and 2024 (spells.class) spell data #}
-{% set has_any_spells = false %}
+{# Collect all spells from both legacy (classSpells) and 2024 (spells) formats #}
+{% set all_spells = [] %}
+
+{# Collect legacy (2014) spells from classSpells #}
 {% if character.classSpells is defined %}
   {% for class in character.classSpells %}
     {% if class.spells is defined and class.spells is not empty %}
-      {% set has_any_spells = true %}
+      {% set all_spells = all_spells|merge(class.spells) %}
     {% endif %}
   {% endfor %}
 {% endif %}
-{# Also check for 2024 spells in character.spells (class, race, item, feat) #}
+
+{# Collect 2024 spells from all sources: class, race, item, feat #}
 {% if character.spells is defined %}
-  {% if (character.spells.class is defined and character.spells.class is not empty)
-     or (character.spells.race is defined and character.spells.race is not empty)
-     or (character.spells.item is defined and character.spells.item is not empty)
-     or (character.spells.feat is defined and character.spells.feat is not empty) %}
-    {% set has_any_spells = true %}
+  {% if character.spells.class is defined %}
+    {% set all_spells = all_spells|merge(character.spells.class) %}
+  {% endif %}
+  {% if character.spells.race is defined %}
+    {% set all_spells = all_spells|merge(character.spells.race) %}
+  {% endif %}
+  {% if character.spells.item is defined %}
+    {% set all_spells = all_spells|merge(character.spells.item) %}
+  {% endif %}
+  {% if character.spells.feat is defined %}
+    {% set all_spells = all_spells|merge(character.spells.feat) %}
   {% endif %}
 {% endif %}
 
-{% if has_any_spells %}
+{# Sort spells by level (0-9) then alphabetically by name #}
+{% set sorted_spells = all_spells|sort((a, b) => a.definition.level <=> b.definition.level ?: a.definition.name <=> b.definition.name) %}
+
+{% if sorted_spells is not empty %}
   <div class="row">
     <div class="col mb-1">
       <button
@@ -31,97 +43,69 @@
     <div class="w-100"></div>
     <div class="col">
       <div class="spells row collapse" id="spells-{{ character.id }}">
-        {# Display legacy (2014) spells from classSpells #}
-        {% if character.classSpells is defined %}
-          {% for class in character.classSpells %}
-            {% if class.spells is defined and class.spells is not empty %}
-              {% for spell in class.spells %}
-                <div class="col-12">
-                  <span class="badge badge-info">{{ spell.definition.level }}</span>
-                  <a
-                    href="#"
-                    data-toggle="popover"
-                    data-trigger="focus"
-                    data-html="true"
-                    title="{{ spell.definition.name|e }}"
-                    data-content="{{ spell.definition.description|e('html_attr') }}"
-                  >{{ spell.definition.name }}</a>
-                </div>
+        {# Display spell slots if available #}
+        {% if character.spellSlots is defined and character.spellSlots is not empty %}
+          <div class="col-12 mb-2">
+            <div class="spell-slots">
+              <strong>Spell Slots:</strong>
+              {% for slot in character.spellSlots %}
+                {% if slot.available is defined or slot.used is defined %}
+                  <span class="badge badge-secondary ml-1">
+                    Level {{ slot.level }}: {{ slot.available ?? (slot.level.available - slot.level.used)|default(0) }}
+                  </span>
+                {% endif %}
               {% endfor %}
-            {% endif %}
-          {% endfor %}
+            </div>
+          </div>
+        {% elseif character.classes is defined %}
+          {# Try alternate spell slot structure from class data #}
+          {% set has_slots = false %}
+          <div class="col-12 mb-2">
+            <div class="spell-slots">
+              <strong>Spell Slots:</strong>
+              {% for class in character.classes %}
+                {% if class.spellSlots is defined %}
+                  {% for level, slots in class.spellSlots %}
+                    {% if slots > 0 %}
+                      {% set has_slots = true %}
+                      <span class="badge badge-secondary ml-1">Level {{ level }}: {{ slots }}</span>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
         {% endif %}
 
-        {# Display 2024 spells from all sources: class, race, item, feat #}
-        {% if character.spells is defined %}
-          {# Class spells #}
-          {% if character.spells.class is defined %}
-            {% for spell in character.spells.class %}
-              <div class="col-12">
-                <span class="badge badge-info">{{ spell.definition.level }}</span>
-                <a
-                  href="#"
-                  data-toggle="popover"
-                  data-trigger="focus"
-                  data-html="true"
-                  title="{{ spell.definition.name|e }}"
-                  data-content="{{ spell.definition.description|e('html_attr') }}"
-                >{{ spell.definition.name }}</a>
-              </div>
-            {% endfor %}
+        {# Display sorted spells #}
+        {% set current_level = -1 %}
+        {% for spell in sorted_spells %}
+          {# Add level header when level changes #}
+          {% if spell.definition.level != current_level %}
+            {% set current_level = spell.definition.level %}
+            <div class="col-12 mt-2">
+              <h6 class="text-muted">
+                {% if current_level == 0 %}
+                  Cantrips
+                {% else %}
+                  Level {{ current_level }}
+                {% endif %}
+              </h6>
+            </div>
           {% endif %}
 
-          {# Race spells #}
-          {% if character.spells.race is defined %}
-            {% for spell in character.spells.race %}
-              <div class="col-12">
-                <span class="badge badge-info">{{ spell.definition.level }}</span>
-                <a
-                  href="#"
-                  data-toggle="popover"
-                  data-trigger="focus"
-                  data-html="true"
-                  title="{{ spell.definition.name|e }}"
-                  data-content="{{ spell.definition.description|e('html_attr') }}"
-                >{{ spell.definition.name }}</a>
-              </div>
-            {% endfor %}
-          {% endif %}
-
-          {# Item spells #}
-          {% if character.spells.item is defined %}
-            {% for spell in character.spells.item %}
-              <div class="col-12">
-                <span class="badge badge-info">{{ spell.definition.level }}</span>
-                <a
-                  href="#"
-                  data-toggle="popover"
-                  data-trigger="focus"
-                  data-html="true"
-                  title="{{ spell.definition.name|e }}"
-                  data-content="{{ spell.definition.description|e('html_attr') }}"
-                >{{ spell.definition.name }}</a>
-              </div>
-            {% endfor %}
-          {% endif %}
-
-          {# Feat spells #}
-          {% if character.spells.feat is defined %}
-            {% for spell in character.spells.feat %}
-              <div class="col-12">
-                <span class="badge badge-info">{{ spell.definition.level }}</span>
-                <a
-                  href="#"
-                  data-toggle="popover"
-                  data-trigger="focus"
-                  data-html="true"
-                  title="{{ spell.definition.name|e }}"
-                  data-content="{{ spell.definition.description|e('html_attr') }}"
-                >{{ spell.definition.name }}</a>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endif %}
+          <div class="col-12">
+            <span class="badge badge-info">{{ spell.definition.level }}</span>
+            <a
+              href="#"
+              data-toggle="popover"
+              data-trigger="focus"
+              data-html="true"
+              title="{{ spell.definition.name|e }}"
+              data-content="{{ spell.definition.description|e('html_attr') }}"
+            >{{ spell.definition.name }}</a>
+          </div>
+        {% endfor %}
       </div>
     </div>
   </div>
