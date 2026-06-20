@@ -1,54 +1,88 @@
-{# Show features and actions with limited uses or charges #}
+{# Show features and actions with limited uses, charges, or per-turn/per-attack abilities #}
 {# Collect features from various sources in the character data #}
-{% set limited_features = [] %}
+{% set all_features = [] %}
+{% set feature_ids = [] %}
 
-{# Check for features with limited uses #}
+{# Helper macro to check if feature should be included #}
+{% macro shouldIncludeFeature(feature) %}
+  {% set description = (feature.definition.description ?? feature.snippet ?? feature.description ?? '')|lower %}
+  {% if (feature.limitedUse is defined and feature.limitedUse)
+     or ('per turn' in description)
+     or ('on your turn' in description)
+     or ('per attack' in description)
+     or ('once per turn' in description)
+     or ('once on your turn' in description) %}
+    true
+  {% endif %}
+{% endmacro %}
+
+{# Check for features #}
 {% if character.features is defined %}
   {% for feature in character.features %}
-    {% if feature.limitedUse is defined and feature.limitedUse %}
-      {% set limited_features = limited_features|merge([feature]) %}
+    {% if _self.shouldIncludeFeature(feature) %}
+      {% set feature_id = feature.id ?? feature.definition.id ?? loop.index0 %}
+      {% if feature_id not in feature_ids %}
+        {% set all_features = all_features|merge([feature]) %}
+        {% set feature_ids = feature_ids|merge([feature_id]) %}
+      {% endif %}
     {% endif %}
   {% endfor %}
 {% endif %}
 
-{# Check for class features with limited uses #}
+{# Check for class features #}
 {% if character.classFeatures is defined %}
   {% for feature in character.classFeatures %}
-    {% if feature.limitedUse is defined and feature.limitedUse %}
-      {% set limited_features = limited_features|merge([feature]) %}
+    {% if _self.shouldIncludeFeature(feature) %}
+      {% set feature_id = feature.id ?? feature.definition.id ?? ('cf_' ~ loop.index0) %}
+      {% if feature_id not in feature_ids %}
+        {% set all_features = all_features|merge([feature]) %}
+        {% set feature_ids = feature_ids|merge([feature_id]) %}
+      {% endif %}
     {% endif %}
   {% endfor %}
 {% endif %}
 
-{# Check for actions with limited uses #}
+{# Check for actions #}
 {% if character.actions is defined %}
   {% for action_category in character.actions %}
     {% if action_category is iterable %}
       {% for action in action_category %}
-        {% if action.limitedUse is defined and action.limitedUse %}
-          {% set limited_features = limited_features|merge([action]) %}
+        {% if _self.shouldIncludeFeature(action) %}
+          {% set feature_id = action.id ?? action.definition.id ?? ('act_' ~ loop.parent.loop.index0 ~ '_' ~ loop.index0) %}
+          {% if feature_id not in feature_ids %}
+            {% set all_features = all_features|merge([action]) %}
+            {% set feature_ids = feature_ids|merge([feature_id]) %}
+          {% endif %}
         {% endif %}
       {% endfor %}
     {% endif %}
   {% endfor %}
 {% endif %}
 
-{# Check for feats with limited uses #}
+{# Check for feats #}
 {% if character.feats is defined %}
   {% for feat in character.feats %}
-    {% if feat.limitedUse is defined and feat.limitedUse %}
-      {% set limited_features = limited_features|merge([feat]) %}
+    {% if _self.shouldIncludeFeature(feat) %}
+      {% set feature_id = feat.id ?? feat.definition.id ?? ('feat_' ~ loop.index0) %}
+      {% if feature_id not in feature_ids %}
+        {% set all_features = all_features|merge([feat]) %}
+        {% set feature_ids = feature_ids|merge([feature_id]) %}
+      {% endif %}
     {% endif %}
   {% endfor %}
 {% endif %}
 
-{# Check for modifiers that have component types indicating limited uses #}
+{# Check for modifiers that have component types #}
 {% if character.modifiers is defined %}
   {% for modifier_category in character.modifiers %}
     {% if modifier_category is iterable %}
       {% for modifier in modifier_category %}
-        {% if modifier.componentTypeId is defined and modifier.limitedUse is defined and modifier.limitedUse %}
-          {% set limited_features = limited_features|merge([modifier]) %}
+        {% if modifier.componentTypeId is defined and _self.shouldIncludeFeature(modifier) %}
+          {% set feature_id = modifier.id ?? modifier.componentId ?? ('mod_' ~ loop.parent.loop.index0 ~ '_' ~ loop.index0) %}
+          {% if feature_id not in feature_ids %}
+            {% set all_features = all_features|merge([modifier]) %}
+            {% set feature_ids = feature_ids|merge([feature_id]) %}
+          {% endif %}
         {% endif %}
       {% endfor %}
     {% endif %}
@@ -56,7 +90,7 @@
 {% endif %}
 
 {# Sort features alphabetically by name #}
-{% set sorted_features = limited_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
+{% set sorted_features = all_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
 
 {% if sorted_features is not empty %}
   <div class="row">
@@ -71,7 +105,7 @@
     <div class="w-100"></div>
     <div class="col">
       <div class="features row collapse" id="features-{{ character.id }}">
-        {# Display features with limited uses #}
+        {# Display features with limited uses or per-turn/per-attack abilities #}
         {% for feature in sorted_features %}
           {% set feature_name = feature.definition.name ?? feature.name ?? 'Unknown Feature' %}
           {% set feature_description = feature.definition.description ?? feature.snippet ?? feature.description ?? '' %}
