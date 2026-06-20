@@ -5,13 +5,17 @@
 
 {# Helper macro to check if feature should be included #}
 {% macro shouldIncludeFeature(feature) %}
+  {% set feature_name = feature.definition.name ?? feature.name ?? '' %}
   {% set description = (feature.definition.description ?? feature.snippet ?? feature.description ?? '')|lower %}
-  {% if (feature.limitedUse is defined and feature.limitedUse)
+  {# Only include if it has a name and matches our criteria #}
+  {% if feature_name is not empty and (
+     (feature.limitedUse is defined and feature.limitedUse)
      or ('per turn' in description)
      or ('on your turn' in description)
      or ('per attack' in description)
      or ('once per turn' in description)
-     or ('once on your turn' in description) %}
+     or ('once on your turn' in description)
+  ) %}
     true
   {% endif %}
 {% endmacro %}
