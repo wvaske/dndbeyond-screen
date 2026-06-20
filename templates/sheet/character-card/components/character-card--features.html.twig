@@ -1,0 +1,110 @@
+{# Show features and actions with limited uses or charges #}
+{# Collect features from various sources in the character data #}
+{% set limited_features = [] %}
+
+{# Check for features with limited uses #}
+{% if character.features is defined %}
+  {% for feature in character.features %}
+    {% if feature.limitedUse is defined and feature.limitedUse %}
+      {% set limited_features = limited_features|merge([feature]) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# Check for class features with limited uses #}
+{% if character.classFeatures is defined %}
+  {% for feature in character.classFeatures %}
+    {% if feature.limitedUse is defined and feature.limitedUse %}
+      {% set limited_features = limited_features|merge([feature]) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# Check for actions with limited uses #}
+{% if character.actions is defined %}
+  {% for action_category in character.actions %}
+    {% if action_category is iterable %}
+      {% for action in action_category %}
+        {% if action.limitedUse is defined and action.limitedUse %}
+          {% set limited_features = limited_features|merge([action]) %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# Check for feats with limited uses #}
+{% if character.feats is defined %}
+  {% for feat in character.feats %}
+    {% if feat.limitedUse is defined and feat.limitedUse %}
+      {% set limited_features = limited_features|merge([feat]) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# Check for modifiers that have component types indicating limited uses #}
+{% if character.modifiers is defined %}
+  {% for modifier_category in character.modifiers %}
+    {% if modifier_category is iterable %}
+      {% for modifier in modifier_category %}
+        {% if modifier.componentTypeId is defined and modifier.limitedUse is defined and modifier.limitedUse %}
+          {% set limited_features = limited_features|merge([modifier]) %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# Sort features alphabetically by name #}
+{% set sorted_features = limited_features|sort((a, b) => (a.definition.name ?? a.name ?? '') <=> (b.definition.name ?? b.name ?? '')) %}
+
+{% if sorted_features is not empty %}
+  <div class="row">
+    <div class="col mb-1">
+      <button
+        class="btn btn-success" type="button" data-toggle="collapse"
+        data-target="#features-{{ character.id }}" aria-expanded="false"
+        aria-controls="features-{{ character.id }}"
+      >Features & Actions
+      </button>
+    </div>
+    <div class="w-100"></div>
+    <div class="col">
+      <div class="features row collapse" id="features-{{ character.id }}">
+        {# Display features with limited uses #}
+        {% for feature in sorted_features %}
+          {% set feature_name = feature.definition.name ?? feature.name ?? 'Unknown Feature' %}
+          {% set feature_description = feature.definition.description ?? feature.snippet ?? feature.description ?? '' %}
+          {% set limited_use = feature.limitedUse %}
+
+          <div class="col-12">
+            {# Display usage information #}
+            {% if limited_use %}
+              {% set max_uses = limited_use.maxUses ?? limited_use.numberUsed ?? 0 %}
+              {% set used = limited_use.numberUsed ?? 0 %}
+              {% set available = max_uses - used %}
+
+              <span class="badge badge-success">
+                {{ available }}/{{ max_uses }}
+              </span>
+            {% endif %}
+
+            <a
+              href="#"
+              data-toggle="popover"
+              data-trigger="focus"
+              data-html="true"
+              title="{{ feature_name|e }}"
+              data-content="{{ feature_description|e('html_attr') }}"
+            >{{ feature_name }}</a>
+
+            {# Show reset type if available #}
+            {% if limited_use.resetType is defined %}
+              <small class="text-muted">({{ limited_use.resetType }})</small>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endif %}
