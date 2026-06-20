@@ -57,16 +57,19 @@ Open `http://127.0.0.1:8000` in your browser. Enter the Character ID for a publi
 
 If you encounter a `FatalErrorException` in `vendor/symfony/http-client/Response/CurlResponse.php` around line 330, this is due to a return type incompatibility with PHP 8.5+.
 
-**Quick fix:** Edit `vendor/symfony/http-client/Response/CurlResponse.php` line 323 and remove the `: int` return type declaration:
+**Quick fix:** Edit `vendor/symfony/http-client/Response/CurlResponse.php` around line 330 to handle the false return value:
 
 ```php
-// Change this:
-private static function select(ClientState $multi, float $timeout): int
+// Find the select() method and replace:
+return curl_multi_select($multi->handle, $timeout);
 
-// To this:
-private static function select(ClientState $multi, float $timeout)
+// With:
+$result = curl_multi_select($multi->handle, $timeout);
+
+// PHP 8.5+ can return false on error, convert to -1 for compatibility
+return false === $result ? -1 : $result;
 ```
 
-This is a known compatibility issue with the older Symfony 4.4 HttpClient component and PHP 8.5. The vendor files are not tracked in git, so this fix needs to be applied after running `composer install`.
+This is a known compatibility issue with the older Symfony 4.4 HttpClient component and PHP 8.5. In PHP 8.5+, `curl_multi_select()` can return `false` on error, but the method signature requires an `int` return type. The vendor files are not tracked in git, so this fix needs to be applied after running `composer install`.
 
 **Note:** This is a temporary workaround. For production use, consider upgrading to a newer Symfony version that fully supports PHP 8.5.

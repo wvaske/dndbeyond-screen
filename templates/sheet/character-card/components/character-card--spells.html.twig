@@ -4,7 +4,7 @@
     {% set physical_caster_ids = physical_caster_ids|merge([class.id]) %}
   {% endif %}
 {% endfor %}
-{% if character.classSpells[0].spells is not empty %}
+{% if character.classSpells is defined and character.classSpells is not empty %}
   <div class="row">
     <div class="col mb-1">
       <button

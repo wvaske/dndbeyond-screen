@@ -2,14 +2,19 @@
 
 require('../css/app.css');
 
+// Import jQuery BEFORE Bootstrap (Bootstrap depends on jQuery)
+const $ = require('jquery');
+// Make jQuery global for Bootstrap
+global.$ = global.jQuery = $;
+
+// Import Popper.js (required by Bootstrap 4)
+require('popper.js');
+
 import CharacterUpdater from './CharacterUpdater';
 import TimeSince from './TimeSince';
 import 'bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
-
-// @TODO: Replace jquery with jquery-slim.
-const $ = require('jquery');
 
 $(document).ready(() => {
   // Init the tooltips we have for various properties.
