@@ -111,10 +111,12 @@
       <div class="features row collapse" id="features-{{ character.id }}">
         {# Display features with limited uses or per-turn/per-attack abilities #}
         {% for feature in sorted_features %}
-          {% set feature_name = feature.definition.name ?? feature.name ?? 'Unknown Feature' %}
+          {% set feature_name = feature.definition.name ?? feature.name ?? '' %}
           {% set feature_description = feature.definition.description ?? feature.snippet ?? feature.description ?? '' %}
           {% set limited_use = feature.limitedUse is defined ? feature.limitedUse : null %}
 
+          {# Skip features without a valid name as a final safety check #}
+          {% if feature_name is not empty and feature_name|trim != '' %}
           <div class="col-12">
             {# Display usage information #}
             {% if limited_use %}
@@ -141,6 +143,7 @@
               <small class="text-muted">({{ limited_use.resetType }})</small>
             {% endif %}
           </div>
+          {% endif %}
         {% endfor %}
       </div>
     </div>
