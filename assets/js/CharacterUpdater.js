@@ -75,6 +75,7 @@ export default class CharacterUpdater {
 
       if (last_requested !== new_requested) {
         card.outerHTML = data;
+        // Collapse is now handled via event delegation in app.js, no need to re-init
       }
     }
   }

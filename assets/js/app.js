@@ -29,6 +29,15 @@ $(document).ready(() => {
     trigger: 'focus',
   });
 
+  // Bootstrap collapse should auto-initialize from data attributes
+  // But we need to ensure the click handler is attached for dynamically loaded content
+  // Use event delegation on document for collapse toggles
+  $(document).on('click', '[data-toggle="collapse"]', function(e) {
+    e.preventDefault();
+    const target = $(this).data('target');
+    $(target).collapse('toggle');
+  });
+
   let character_updaters = {};
   // Start the automatic refreshing for all available characters.
   document.querySelectorAll('.character[data-character-id]').forEach((card) => {
