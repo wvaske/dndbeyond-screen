@@ -42,7 +42,13 @@ class ScreenController extends AbstractController {
         try {
           $characters[] = $this->characterFetcher->get($campaign_character['characterId']);
         }
-        catch (ClientExceptionInterface $x) {
+        catch (\Throwable $x) {
+          // Skip characters that error (403 forbidden, 404 not found, 500 server errors, etc.)
+          error_log(sprintf(
+            'Skipping character %d: %s',
+            $campaign_character['characterId'],
+            $x->getMessage()
+          ));
           continue;
         }
       }

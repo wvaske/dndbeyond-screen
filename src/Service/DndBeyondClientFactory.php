@@ -22,6 +22,8 @@ class DndBeyondClientFactory {
         'User-Agent'   => 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0',
         'Referer'      => 'https://www.dndbeyond.com/',
       ],
+      'timeout' => 10, // 10 second timeout to prevent hanging requests
+      'max_duration' => 15, // Maximum time for the entire request including redirects
     ]);
     $client = new DndBeyondClientService($http_client, $store, ['default_ttl' => $defaultTtl]);
 
